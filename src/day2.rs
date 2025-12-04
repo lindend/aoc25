@@ -42,7 +42,7 @@ pub fn part1(ranges: &Vec<Range>) -> i64 {
     sum
 }
 
-// Execution took 1349ms
+// Execution took 231ms
 fn is_repeated_str(current: i64) -> bool {
     let current_str = current.to_string();
 
@@ -60,7 +60,7 @@ fn is_repeated_str(current: i64) -> bool {
     false
 }
 
-// Execution took 635ms
+// Execution took 202ms
 fn is_repeated(current: i64) -> bool {
     let current_len = current.ilog10() + 1;
     for test_len in 0..current_len{
@@ -90,10 +90,8 @@ pub fn part2(ranges: &Vec<Range>) -> i64 {
         while current <= *max {
             if is_repeated(current) {
                 sum += current;
-                current += 10;
-            } else {
-                current += 1;
             }
+            current += 1;
         }
     }
 
