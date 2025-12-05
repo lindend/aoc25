@@ -19,22 +19,11 @@ fn parse_input(input: &str) -> Grid<Cell> {
 
 
 pub fn get_accessible(grid: &Grid<Cell>) -> Vec<Vec2<i64>> {
-    let neighbours = vec![
-        Vec2::new(-1, 0),
-        Vec2::new(1, 0),
-        Vec2::new(-1, 1),
-        Vec2::new(0, 1),
-        Vec2::new(1, 1),
-        Vec2::new(-1, -1),
-        Vec2::new(0, -1),
-        Vec2::new(1, -1)
-    ];
-
     grid.iter()
         .filter(|(pos, value)|
             **value == Cell::PaperRoll &&
-            neighbours.iter()
-                .filter(|n| grid.at(n.x + pos.x, n.y + pos.y).unwrap_or(Cell::Empty) == Cell::PaperRoll)
+            grid.neighbours(pos.x, pos.y)
+                .filter(|(_, v)| *v == Cell::PaperRoll)
                 .count() < 4
         )
         .map(|(pos, _)| pos)
