@@ -24,6 +24,7 @@ mod util;
 // TODO: Slow days
 // 2 p1 & p2
 // 4 p2
+// 8 p1 & p2
 fn main() {
     day8();
 }
