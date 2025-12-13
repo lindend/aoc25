@@ -101,7 +101,7 @@ pub fn part2(ranges: &Vec<Range>) -> i64 {
 pub fn day2() {
     let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
 
-    let inputs = parse_input(&input);
+    let inputs = timed(|| parse_input(&input));
 
     println!("Part 1: {}", timed(|| part1(&inputs)));
     println!("Part 2: {}", timed(|| part2(&inputs)));

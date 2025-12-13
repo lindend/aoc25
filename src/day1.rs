@@ -1,4 +1,5 @@
 use std::fs;
+use crate::timed::timed;
 
 fn parse_input(input: &str) -> Vec<i32> {
     input
@@ -46,11 +47,11 @@ pub fn part2(inputs: &Vec<i32>, start: i32) -> i32 {
 
 pub fn day1() {
     let input = fs::read_to_string("inputs/day1.txt").expect("Could not read input");
-    
-    let inputs = parse_input(&input);
 
-    println!("Part 1: {}", part1(&inputs, 50));
-    println!("Part 2: {}", part2(&inputs, 50));
+    let inputs = timed(|| parse_input(&input));
+
+    println!("Part 1: {}", timed(|| part1(&inputs, 50)));
+    println!("Part 2: {}", timed(|| part2(&inputs, 50)));
 }
 
 
