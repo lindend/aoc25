@@ -136,7 +136,7 @@ pub fn part1(input: &Vec<Node>, num_pairs: usize) -> i64 {
     let mut circuit_ids: Vec<_> = (0..input.len()).map(|c| None).collect();
     let mut circuits: Vec<HashSet<usize>> = Vec::new();
 
-    for pair in closest_pairs.iter().rev().take(num_pairs) {
+    for pair in closest_pairs.iter().take(num_pairs) {
         let cid0 = circuit_ids[pair.id0];
         let cid1 = circuit_ids[pair.id1];
         if cid0 != None && cid0 == cid1 {
@@ -183,7 +183,56 @@ pub fn part1(input: &Vec<Node>, num_pairs: usize) -> i64 {
 }
 
 pub fn part2(input: &Vec<Node>) -> i64 {
-    0
+    let start = Instant::now();
+
+    let mut closest_pairs = find_pairs(input, input.len() * input.len());
+
+    let found_pairs = Instant::now();
+
+    let mut circuit_ids: Vec<_> = (0..input.len()).map(|c| None).collect();
+    let mut circuits: Vec<HashSet<usize>> = Vec::new();
+
+    for pair in closest_pairs.iter() {
+        let cid0 = circuit_ids[pair.id0];
+        let cid1 = circuit_ids[pair.id1];
+        if cid0 != None && cid0 == cid1 {
+            continue;
+        }
+
+        // Add all to new circuit
+        let (new_circuit, old_circuit) = match (cid0, cid1) {
+            (None, None) => (circuits.len(), None),
+            (Some(cid), None) => (cid, None),
+            (None, Some(cid)) => (cid, None),
+            (Some(cid), Some(old_cid)) => (cid, Some(old_cid)),
+        };
+        if new_circuit == circuits.len() {
+            circuits.push(HashSet::new());
+        }
+        circuits[new_circuit].insert(pair.id0);
+        circuits[new_circuit].insert(pair.id1);
+
+        for &circ in &circuits[new_circuit] {
+            circuit_ids[circ] = Some(new_circuit);
+        }
+        if let Some(old_circuit) = old_circuit {
+            for &circ in &circuits[old_circuit] {
+                circuit_ids[circ] = Some(new_circuit);
+            }
+            let old_entries = circuits[old_circuit].clone();
+            circuits[new_circuit].extend(old_entries);
+            circuits[old_circuit].clear();
+        }
+
+        if circuits[new_circuit].len() == input.len() {
+            let form_circuits = Instant::now();
+            print_timespan("Find pairs", found_pairs - start);
+            print_timespan("Form circuits", form_circuits - found_pairs);
+            return input[pair.id0].x * input[pair.id1].x;
+        }
+    }
+
+    panic!("wtf");
 }
 
 pub fn day8() {
@@ -229,6 +278,6 @@ mod tests {
     #[test]
     fn test_p2() {
         let input = parse_input(&TEST_INPUT);
-        assert_eq!(40, part2(&input));
+        assert_eq!(25272, part2(&input));
     }
 }
