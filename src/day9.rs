@@ -6,6 +6,7 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs;
 use std::mem::swap;
+use std::net::AddrParseError;
 use std::rc::Rc;
 use std::simd::cmp::SimdOrd;
 use std::simd::num::SimdInt;
@@ -36,11 +37,10 @@ fn parse_input(input: &str) -> Vec<Node> {
 
 fn area(n1x: i64x8, n1y: i64x8, n2x: i64x8, n2y: i64x8) -> i64x8 {
     let ones = Simd::splat(1);
-    let dx = n1x - n2x + ones;
-    let dy = n1y - n2y + ones;
+    let dx = (n1x - n2x).abs() + ones;
+    let dy = (n1y - n2y).abs() + ones;
 
-    let signed_areas = dx * dy;
-    signed_areas.abs()
+    dx * dy
 }
 
 pub fn part1(input: &Vec<Node>) -> i64 {
@@ -162,8 +162,6 @@ pub fn part2(input: &Vec<Node>) -> i64 {
         ys.push(i.y);
     }
 
-    let (ax, ay) = shrink_outline(&xs, &ys, input.len());
-
     for i in 0..input.len() % 8 + 8 {
         xs.push(0);
         ys.push(0);
@@ -196,50 +194,46 @@ pub fn part2(input: &Vec<Node>) -> i64 {
 
             let area = areas.to_array();
             for k in 0..area.len() {
-                let area = area[k];
-                if area > max_area {
-                    let i = i + k;
-                    let j = j + k;
-
-                    area_buffer.push((i, j, area));
+                let a = area[k];
+                if a > max_area {
+                    area_buffer.push((i + k, j + k, a));
                 }
             }
         }
-        if area_buffer.len() > 1000 || i >= input.len() - 8 {
+        if area_buffer.len() > 100 || i >= input.len() - 8 {
             area_buffer.sort_by_key(|&(_, _, area)| Reverse(area));
             'area_loop: for &(i, j, area) in &area_buffer {
                 if area <= max_area {
                     break;
                 }
 
-                let min = [xs[i].min(xs[j]) + 1, ys[i].min(ys[j]) + 1];
-                let max = [xs[i].max(xs[j]) - 1, ys[i].max(ys[j]) - 1];
+                let min = Vec2::new(xs[i].min(xs[j]), ys[i].min(ys[j]));
+                let max = Vec2::new(xs[i].max(xs[j]), ys[i].max(ys[j]));
 
-                // let sa = surrounded_area(input.len(), &ax, &ay, i, j);
-                // if area == sa {
-                //     max_area = area;
-                // }
+                for r in 0..num_inputs {
+                    let v = Vec2::new(xs[r], ys[r]);
 
-                let end = Vec2::new(xs[j], ys[j]);
+                    let nr = (r + 1) % num_inputs;
+                    let nv = Vec2::new(xs[nr], ys[nr]);
 
-                for r in i..j {
-                    let xv = xs[r];
-                    let yv = ys[r];
-                    let dx = xs[(r + 1) % num_inputs] - xv;
-                    let dy = ys[(r + 1) % num_inputs] - yv;
+                    if v.in_bounds(min + Vec2::one(), max - Vec2::one()) {
+                        continue 'area_loop;
+                    }
 
-                    // Rotate delta vector 90 deg to left to form the normal
-                    let normal = Vec2::new(-dy, dx);
-                    let to_end = end - Vec2::new(xv, yv);
+                    let inside_y =
+                        (v.y >= min.y && v.y <= max.y) || (nv.y >= min.y && nv.y <= max.y);
+                    let inside_x =
+                        (v.x >= min.x && v.x <= max.x) || (nv.x >= min.x && nv.x <= max.x);
 
-                    if normal.dot(&to_end) < 0 {
+                    if (v.x > max.x && nv.x < max.x && inside_y)
+                        || (v.x > min.x && nv.x < min.x && inside_y)
+                        || (v.y > max.y && nv.y < max.y && inside_x)
+                        || (v.y > min.y && nv.y < min.y && inside_x)
+                    {
                         continue 'area_loop;
                     }
                 }
-
-                // if !point_grid.bbox_contains_point(&min, &max) {
                 max_area = area;
-                // }
             }
             area_buffer.clear();
         }
@@ -257,9 +251,12 @@ pub fn day9() {
     println!("Part 2: {}", timed(|| part2(&inputs)));
 }
 
-// 1410470448 too low
 // 222529760 too low
+// 1410470448 too low
+// 1410501884
+// 1478326656 wrong
 // 2859243744 too high
+//
 
 #[cfg(test)]
 mod tests {
