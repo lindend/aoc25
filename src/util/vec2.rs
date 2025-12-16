@@ -7,7 +7,7 @@ pub struct Vec2<T> {
     pub(crate) y: T,
 }
 
-impl<T: Add<Output=T>> Add for Vec2<T> {
+impl<T: Add<Output = T>> Add for Vec2<T> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -18,7 +18,7 @@ impl<T: Add<Output=T>> Add for Vec2<T> {
     }
 }
 
-impl<T: Sub<Output=T>> Sub for Vec2<T> {
+impl<T: Sub<Output = T>> Sub for Vec2<T> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -29,7 +29,7 @@ impl<T: Sub<Output=T>> Sub for Vec2<T> {
     }
 }
 
-impl<T: Copy + Mul<Output=T>> Mul<T> for Vec2<T> {
+impl<T: Copy + Mul<Output = T>> Mul<T> for Vec2<T> {
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
@@ -40,7 +40,7 @@ impl<T: Copy + Mul<Output=T>> Mul<T> for Vec2<T> {
     }
 }
 
-impl<T: Copy + Div<Output=T>> Div<T> for Vec2<T> {
+impl<T: Copy + Div<Output = T>> Div<T> for Vec2<T> {
     type Output = Self;
 
     fn div(self, rhs: T) -> Self::Output {
@@ -53,10 +53,7 @@ impl<T: Copy + Div<Output=T>> Div<T> for Vec2<T> {
 
 impl<T: Copy> Vec2<T> {
     pub fn new(x: T, y: T) -> Vec2<T> {
-        Vec2 {
-            x,
-            y,
-        }
+        Vec2 { x, y }
     }
 }
 
@@ -90,23 +87,31 @@ impl<T: Copy + From<u8> + Ord> Vec2<T> {
     }
 
     pub fn in_bounds(self, min: Self, max: Self) -> bool {
-        self.x >= min.x && self.y >= min.y &&
-            self.x <= max.x && self.y <= max.y
+        self.x >= min.x && self.y >= min.y && self.x <= max.x && self.y <= max.y
     }
 }
 
-impl Vec2<i32> {
+impl Vec2<i64> {
     pub fn abs(&self) -> Self {
         Vec2::new(self.x.abs(), self.y.abs())
     }
 
-    pub fn manhattan_distance(&self) -> i32 {
+    pub fn manhattan_distance(&self) -> i64 {
         let abs = self.abs();
         abs.x + abs.y
     }
 
     pub fn all_dirs() -> Vec<Vec2<i32>> {
-        vec![Vec2::new(1, 0), Vec2::new(-1, 0), Vec2::new(0, 1), Vec2::new(0, -1)]
+        vec![
+            Vec2::new(1, 0),
+            Vec2::new(-1, 0),
+            Vec2::new(0, 1),
+            Vec2::new(0, -1),
+        ]
+    }
+
+    pub fn dot(&self, other: &Self) -> i64 {
+        self.x * other.x + self.y * other.y
     }
 }
 

@@ -1,5 +1,7 @@
 use crate::timed::{print_timespan, timed};
+use crate::util::spatial_grid::SpatialGrid;
 use crate::util::str_util::transpose;
+use crate::util::vec2::Vec2;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs;
@@ -9,7 +11,6 @@ use std::simd::cmp::SimdOrd;
 use std::simd::num::SimdInt;
 use std::simd::{Simd, i64x8, u32x8};
 use std::time::Instant;
-use crate::util::spatial_grid::SpatialGrid;
 
 #[derive(Copy, Clone)]
 struct Node {
@@ -87,14 +88,33 @@ pub fn part1(input: &Vec<Node>) -> i64 {
     max_area.reduce_max()
 }
 
-fn clamp_plus_one(v: i64, min: i64, max: i64) -> i64 {
-    if v <= min {
-        min
-    } else if v >= max {
-        max + 1
-    } else {
-        v + 1
+fn shrink_outline(xs: &Vec<i64>, ys: &Vec<i64>, len: usize) -> (Vec<i64>, Vec<i64>) {
+    let mut x_mod = 0;
+    let mut y_mod = 0;
+
+    let mut xs = xs.clone();
+    let mut ys = ys.clone();
+
+    for i in 0..len {
+        let j = (i + 1) % len;
+        let dx = xs[j] - xs[i];
+        let dy = ys[j] - ys[i];
+
+        if dx > 0 {
+            y_mod = 0;
+        } else if dx < 0 {
+            y_mod = 1;
+        }
+        if dy > 0 {
+            x_mod = 1;
+        } else if dy < 0 {
+            x_mod = 0;
+        }
+
+        xs[i] += x_mod;
+        ys[i] += y_mod;
     }
+    (xs, ys)
 }
 
 fn surrounded_area(len: usize, xs: &Vec<i64>, ys: &Vec<i64>, from: usize, to: usize) -> i64 {
@@ -114,64 +134,35 @@ fn surrounded_area(len: usize, xs: &Vec<i64>, ys: &Vec<i64>, from: usize, to: us
 
         area += x * dy;
     }
-    area
+    area.abs()
 }
-
-struct NodePair {
-    id0: usize,
-    id1: usize,
-    area: i64,
-}
-
-impl Ord for NodePair {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.area > other.area {
-            Ordering::Less
-        } else if (self.area < other.area) {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    }
-}
-
-impl PartialOrd for NodePair {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for NodePair {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-impl Eq for NodePair {}
 
 pub fn part2(input: &Vec<Node>) -> i64 {
     let start = Instant::now();
 
     let mut xs = Vec::new();
     let mut ys = Vec::new();
-    
+
     let mut min = [i64::MAX; 2];
     let mut max = [0; 2];
-    
+
     for i in input {
         min[0] = min[0].min(i.x);
         min[1] = min[1].min(i.y);
-        
+
         max[0] = max[0].max(i.x);
         max[1] = max[1].max(i.y);
     }
-    
-    let mut point_grid = SpatialGrid::<3, 5>::new(&min, &max);
-    
+
+    let mut point_grid = SpatialGrid::<2, 4>::new(&min, &max);
+
     for i in input {
+        point_grid.add_point(i.id, &[i.x, i.y]);
         xs.push(i.x);
         ys.push(i.y);
     }
+
+    let (ax, ay) = shrink_outline(&xs, &ys, input.len());
 
     for i in 0..input.len() % 8 + 8 {
         xs.push(0);
@@ -186,6 +177,7 @@ pub fn part2(input: &Vec<Node>) -> i64 {
         })
         .collect();
     let mut max_area = 0;
+    let mut area_buffer = Vec::new();
 
     for i in (0..input.len() - 1).step_by(8) {
         let n1x = Simd::from_slice(&xs[i..i + 8]);
@@ -197,69 +189,61 @@ pub fn part2(input: &Vec<Node>) -> i64 {
 
             let mut areas = area(n1x, n1y, n2x, n2y);
 
-            if j + 8 >= num_inputs {
+            if j + 8 > num_inputs {
                 let area_mask = area_masks[j + 8 - num_inputs];
                 areas = areas * area_mask;
             }
-            
+
             let area = areas.to_array();
-            for i in 0..area.len() {
-                let area = area[i];
+            for k in 0..area.len() {
+                let area = area[k];
                 if area > max_area {
-                    let min = 1;
+                    let i = i + k;
+                    let j = j + k;
+
+                    area_buffer.push((i, j, area));
                 }
             }
         }
+        if area_buffer.len() > 1000 || i >= input.len() - 8 {
+            area_buffer.sort_by_key(|&(_, _, area)| Reverse(area));
+            'area_loop: for &(i, j, area) in &area_buffer {
+                if area <= max_area {
+                    break;
+                }
+
+                let min = [xs[i].min(xs[j]) + 1, ys[i].min(ys[j]) + 1];
+                let max = [xs[i].max(xs[j]) - 1, ys[i].max(ys[j]) - 1];
+
+                // let sa = surrounded_area(input.len(), &ax, &ay, i, j);
+                // if area == sa {
+                //     max_area = area;
+                // }
+
+                let end = Vec2::new(xs[j], ys[j]);
+
+                for r in i..j {
+                    let xv = xs[r];
+                    let yv = ys[r];
+                    let dx = xs[(r + 1) % num_inputs] - xv;
+                    let dy = ys[(r + 1) % num_inputs] - yv;
+
+                    // Rotate delta vector 90 deg to left to form the normal
+                    let normal = Vec2::new(-dy, dx);
+                    let to_end = end - Vec2::new(xv, yv);
+
+                    if normal.dot(&to_end) < 0 {
+                        continue 'area_loop;
+                    }
+                }
+
+                // if !point_grid.bbox_contains_point(&min, &max) {
+                max_area = area;
+                // }
+            }
+            area_buffer.clear();
+        }
     }
-
-    let mut x_mod = 0;
-    let mut y_mod = 0;
-    for i in 0..input.len() {
-        let j = (i + 1) % input.len();
-        let dx = xs[j] - xs[i];
-        let dy = ys[j] - ys[i];
-
-        if dx > 0 {
-            y_mod = 0;
-        } else if dx < 0 {
-            y_mod = 1;
-        }
-        if dy > 0 {
-            x_mod = 1;
-        } else if dy < 0 {
-            x_mod = 0;
-        }
-
-        xs[i] += x_mod;
-        ys[i] += y_mod;
-    }
-
-    let found_pairs = Instant::now();
-
-    let sorted_areas = top_areas.into_sorted_vec();
-
-    let mut max_area = 0;
-    let mut num_loops = 0;
-
-    for node_pair in sorted_areas {
-        if node_pair.area <= max_area {
-            break;
-        }
-        num_loops += 1;
-
-        let actual_area = surrounded_area(input.len(), &xs, &ys, node_pair.id0, node_pair.id1);
-        if actual_area < node_pair.area {
-            continue;
-        }
-        
-        max_area = max_area.max(actual_area);
-    }
-
-    let refine_areas = Instant::now();
-    println!("num loops: {num_loops}");
-
-    print_timespan("Find pairs", found_pairs - start);
-    print_timespan("Refine area", refine_areas - found_pairs);
 
     max_area
 }
@@ -272,6 +256,10 @@ pub fn day9() {
     println!("Part 1: {}", timed(|| part1(&inputs)));
     println!("Part 2: {}", timed(|| part2(&inputs)));
 }
+
+// 1410470448 too low
+// 222529760 too low
+// 2859243744 too high
 
 #[cfg(test)]
 mod tests {
