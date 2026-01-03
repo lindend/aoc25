@@ -213,7 +213,6 @@ fn part2_line(buttons: &Buttons, joltages: &Joltages) -> i64 {
         })
         .collect();
     let mut res = gauss_elimination(&matrix);
-    println!("Res: {res:?}");
 
     let mut param_max = vec![i64::MAX; res.len() - 1];
     for (param_idx, param) in res[1..].iter().cloned().enumerate() {
@@ -246,14 +245,10 @@ fn part2_line(buttons: &Buttons, joltages: &Joltages) -> i64 {
         }
     }
 
-    println!("pmax: {param_max:?}, num params: {}", res.len() - 1);
-
     if res.len() == 1 {
         let num_presses = res[0].iter().map(|v| v.round()).sum::<f64>().round() as i64;
         assert_ne!(num_presses, 0);
         assert!(is_p2_solution(buttons, joltages, &res[0]));
-        println!("min num presses: {num_presses}");
-        println!("min v: {:?}", res[0]);
         return num_presses;
     }
 
@@ -284,8 +279,6 @@ fn part2_line(buttons: &Buttons, joltages: &Joltages) -> i64 {
             param_values[i] += 1;
             if param_values[i] > param_max[i] {
                 if i == param_values.len() - 1 {
-                    println!("min num presses: {min_num_presses}");
-                    println!("min v: {min_v:?}");
                     assert!(is_p2_solution(buttons, joltages, &min_v));
                     assert!(min_num_presses > 0);
                     assert!(min_num_presses < 1000000);
@@ -308,7 +301,6 @@ pub fn part2(input: &Input) -> i64 {
         .iter()
         .map(|(_, buttons, joltages)| part2_line(buttons, joltages))
         .collect();
-    println!("num_presses: {num_presses:?}");
     num_presses.iter().sum()
 }
 

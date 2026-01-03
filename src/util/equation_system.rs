@@ -59,12 +59,10 @@ fn make_stair_shape(m: &mut Vec<Vec<f64>>) -> Vec<Vec<f64>> {
 }
 
 pub fn gauss_elimination(m: &Vec<Vec<f64>>) -> GaussEliminationResult {
-    println!("Running gauss elimination on {m:?}");
     let mut m = m.clone();
     let (width, height) = shape(&m);
 
     let mut m = make_stair_shape(&mut m);
-    println!("After normalizing rows: {m:?}");
 
     m.sort_unstable_by(cmp_vec);
 
