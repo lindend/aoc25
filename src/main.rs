@@ -14,6 +14,7 @@ use crate::day10::day10;
 
 mod day1;
 mod day10;
+mod day10_2;
 mod day2;
 mod day3;
 mod day4;

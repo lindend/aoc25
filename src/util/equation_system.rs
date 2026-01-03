@@ -13,7 +13,7 @@ fn shape(m: &Vec<Vec<f64>>) -> (usize, usize) {
 fn cmp_vec(a: &Vec<f64>, b: &Vec<f64>) -> Ordering {
     let len = a.len().min(b.len());
     for i in 0..len {
-        let c = a[i].total_cmp(&b[i]);
+        let c = a[i].abs().total_cmp(&b[i].abs());
         if c != Ordering::Equal {
             return c;
         }
@@ -70,7 +70,6 @@ pub fn gauss_elimination(m: &Vec<Vec<f64>>) -> GaussEliminationResult {
 
     let mut res = vec![vec![None; width - 1]];
     for (row_idx, row) in m.iter().enumerate() {
-        println!("Solving row: {row:?}");
         let first_col = row.iter().enumerate().find(|&(i, p)| *p != 0.0);
         if first_col.is_none() {
             continue;
@@ -79,7 +78,6 @@ pub fn gauss_elimination(m: &Vec<Vec<f64>>) -> GaussEliminationResult {
 
         let mut value = vec![0.0; res.len()];
         value[0] = row[width - 1];
-        println!("Res is {res:?}");
 
         for col_idx in ((first_col_idx + 1)..(width - 1)).rev() {
             let mut v = row[col_idx];
@@ -94,7 +92,6 @@ pub fn gauss_elimination(m: &Vec<Vec<f64>>) -> GaussEliminationResult {
             if res[0][col_idx].is_none() {
                 // This variable in the equation is assigned a parameter
                 // instead.
-                println!("New variable");
                 res[0][col_idx] = Some(0.0);
                 let mut param_vec = vec![Some(0.0); width - 1];
                 param_vec[col_idx] = Some(1.0);
@@ -109,13 +106,10 @@ pub fn gauss_elimination(m: &Vec<Vec<f64>>) -> GaussEliminationResult {
             continue;
         }
 
-        println!("Value for row: {value:?}");
         for result_index in 0..value.len() {
-            res[result_index][first_col_idx] = Some(value[result_index]);
+            res[result_index][first_col_idx] = Some(value[result_index] / col_value);
         }
     }
-
-    println!("{m:?}");
 
     res.iter()
         .map(|r| r.iter().map(|v| v.unwrap()).collect())
@@ -168,9 +162,8 @@ mod tests {
         assert_eq!(
             r,
             vec![
-                vec![-5.0, 3.0, 168.0, 29.0, 0.0, 0.0, 0.0],
-                vec![0.0, 0.0, -1.0, -0.0, 0.0, 0.0, 1.0],
-                vec![1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 0.0],
+                vec![160.0, 3.0, 3.0, -136.0, 0.0, 165.0, 0.0],
+                vec![-1.0, 0.0, 0.0, 1.0, 0.0, -1.0, 1.0],
                 vec![1.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0]
             ]
         );
@@ -220,6 +213,35 @@ mod tests {
                 vec![1, -1, 1, 0, -1, 1],
                 vec![0, -1, -1, 1, 0, 0]
             ])
+        );
+    }
+
+    #[test]
+    fn test_5() {
+        let input = vec![vec![2.0, 10.0]];
+
+        let r = gauss_elimination(&input);
+
+        assert_eq!(r, vec![vec![5.0]]);
+    }
+
+    #[test]
+    fn test_4() {
+        let input = vec![
+            vec![1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 69.0],
+            vec![1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 38.0],
+            vec![0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 26.0],
+            vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 29.0],
+            vec![1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 38.0],
+            vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 36.0],
+            vec![1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 60.0],
+            vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 45.0],
+        ];
+        let r = gauss_elimination(&input);
+
+        assert_eq!(
+            r,
+            equation_system_i64_to_f64(&vec![vec![5, 9, 13, 20, 1, 0, 3, 19]])
         );
     }
 }
