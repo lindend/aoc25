@@ -1,3 +1,5 @@
+use std::io::Lines;
+
 use crate::util::vec2::Vec2;
 
 #[derive(Clone)]
@@ -15,22 +17,38 @@ impl<T: Clone> Grid<T> {
             height,
         }
     }
+}
 
-    pub fn from_str<TL: Fn(char) -> T>(input: &str, from_str: TL) -> Self {
-        let lines: Vec<_> = input.lines().collect();
-        let height = lines.len();
-        let width = lines.first().unwrap().len();
+impl<T: Clone> Grid<T> {
+    pub fn from_lines<'a, TL: Fn(char) -> T>(
+        lines: impl Iterator<Item = &'a str>,
+        from_str: TL,
+    ) -> Self {
+        let mut height = 0;
+        let mut width = 0;
 
-        let cells = lines
-            .iter()
-            .flat_map(|&l| l.chars().map(|c| from_str(c)))
-            .collect();
+        let mut cells = Vec::new();
+
+        for line in lines {
+            if height == 0 {
+                width = line.len();
+            }
+
+            height += 1;
+            for c in line.chars() {
+                cells.push(from_str(c));
+            }
+        }
 
         Self {
             cells,
             width,
             height,
         }
+    }
+
+    pub fn from_str<TL: Fn(char) -> T>(input: &str, from_str: TL) -> Self {
+        Grid::from_lines(input.lines(), from_str)
     }
 }
 
@@ -53,15 +71,16 @@ impl<T: Clone> Grid<T> {
             Some(self.cells[(x + y * self.width as i64) as usize].clone())
         }
     }
-    
+
     pub fn neighbours(&self, x: i64, y: i64) -> impl Iterator<Item = (Vec2<i64>, T)> {
-        NEIGHBOUR_OFFSETS.iter()
+        NEIGHBOUR_OFFSETS
+            .iter()
             .filter_map(move |n| match self.at(n.x + x, n.y + y) {
                 Some(v) => Some((n.clone(), v)),
-                None => None
+                None => None,
             })
     }
-    
+
     pub fn update(&mut self, x: i64, y: i64, v: T) {
         self.cells[(x + y * self.width as i64) as usize] = v;
     }
@@ -69,9 +88,11 @@ impl<T: Clone> Grid<T> {
 
 impl<T> Grid<T> {
     pub fn iter(&self) -> impl Iterator<Item = (Vec2<i64>, &T)> {
-        self.cells
-            .iter()
-            .enumerate()
-            .map(|(i, t)| (Vec2::new((i % self.width) as i64, (i / self.width) as i64), t))
+        self.cells.iter().enumerate().map(|(i, t)| {
+            (
+                Vec2::new((i % self.width) as i64, (i / self.width) as i64),
+                t,
+            )
+        })
     }
 }
