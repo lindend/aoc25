@@ -7,7 +7,6 @@ use std::mem::swap;
 use std::ops::{Add, Mul, Sub};
 use std::rc::Rc;
 use std::simd::{Simd, i64x8, u32x8};
-use std::time::Instant;
 
 #[derive(Copy, Clone)]
 struct Node {
@@ -127,11 +126,7 @@ fn find_pairs(input: &Vec<Node>, num_pairs: usize) -> Vec<NodePair> {
 }
 
 pub fn part1(input: &Vec<Node>, num_pairs: usize) -> i64 {
-    let start = Instant::now();
-
     let mut closest_pairs = find_pairs(input, num_pairs);
-
-    let found_pairs = Instant::now();
 
     let mut circuit_ids: Vec<_> = (0..input.len()).map(|c| None).collect();
     let mut circuits: Vec<HashSet<usize>> = Vec::new();
@@ -169,25 +164,13 @@ pub fn part1(input: &Vec<Node>, num_pairs: usize) -> i64 {
         }
     }
 
-    let form_circuits = Instant::now();
-
     circuits.sort_by_key(|circuit| Reverse(circuit.len()));
-
-    let sorted_circuits = Instant::now();
-
-    print_timespan("Find pairs", found_pairs - start);
-    print_timespan("Form circuits", form_circuits - found_pairs);
-    print_timespan("Sort circuits", sorted_circuits - form_circuits);
 
     (circuits[0].len() * circuits[1].len() * circuits[2].len()) as i64
 }
 
 pub fn part2(input: &Vec<Node>) -> i64 {
-    let start = Instant::now();
-
     let mut closest_pairs = find_pairs(input, input.len() * input.len());
-
-    let found_pairs = Instant::now();
 
     let mut circuit_ids: Vec<_> = (0..input.len()).map(|c| None).collect();
     let mut circuits: Vec<HashSet<usize>> = Vec::new();
@@ -225,9 +208,6 @@ pub fn part2(input: &Vec<Node>) -> i64 {
         }
 
         if circuits[new_circuit].len() == input.len() {
-            let form_circuits = Instant::now();
-            print_timespan("Find pairs", found_pairs - start);
-            print_timespan("Form circuits", form_circuits - found_pairs);
             return input[pair.id0].x * input[pair.id1].x;
         }
     }

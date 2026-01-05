@@ -1,31 +1,32 @@
-use std::cmp::PartialEq;
-use std::fs;
 use crate::timed::timed;
 use crate::util::grid::Grid;
 use crate::util::vec2::Vec2;
+use std::cmp::PartialEq;
+use std::fs;
 
 #[derive(Clone, PartialEq)]
 enum Cell {
     Empty,
-    PaperRoll
+    PaperRoll,
 }
 
 fn parse_input(input: &str) -> Grid<Cell> {
     Grid::from_str(input, |c| match c {
         '@' => Cell::PaperRoll,
-        _ => Cell::Empty
+        _ => Cell::Empty,
     })
 }
 
-
 pub fn get_accessible(grid: &Grid<Cell>) -> Vec<Vec2<i64>> {
     grid.iter()
-        .filter(|(pos, value)|
-            **value == Cell::PaperRoll &&
-            grid.neighbours(pos.x, pos.y)
-                .filter(|(_, v)| *v == Cell::PaperRoll)
-                .count() < 4
-        )
+        .filter(|(pos, value)| {
+            **value == Cell::PaperRoll
+                && grid
+                    .neighbours(pos.x, pos.y)
+                    .filter(|(_, v)| *v == Cell::PaperRoll)
+                    .count()
+                    < 4
+        })
         .map(|(pos, _)| pos)
         .collect()
 }
@@ -40,25 +41,24 @@ pub fn part2(grid: &Grid<Cell>) -> i64 {
     let mut num_removed = 0;
     loop {
         let accessible = get_accessible(&grid);
-        
+
         if accessible.is_empty() {
-            break
+            break;
         }
-        
+
         for a in accessible {
             grid.update(a.x, a.y, Cell::Empty);
             num_removed += 1;
         }
     }
-    
+
     num_removed
 }
-
 
 pub fn day4() {
     let input = fs::read_to_string("inputs/day4.txt").expect("Could not read input");
 
-    let inputs = parse_input(&input);
+    let inputs = timed(|| parse_input(&input));
 
     println!("Part 1: {}", timed(|| part1(&inputs)));
     println!("Part 2: {}", timed(|| part2(&inputs)));

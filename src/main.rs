@@ -34,7 +34,31 @@ mod util;
 // 2 p1 & p2
 // 4 p2
 // 8 p1 & p2
+// 9 p2
 // 10 p1 & p2
 fn main() {
+    println!("Day 1");
+    day1();
+    println!("Day 2");
+    day2();
+    println!("Day 3");
+    day3();
+    println!("Day 4");
+    day4();
+    println!("Day 5");
+    day5();
+    println!("Day 6");
+    day6();
+    println!("Day 7");
+    day7();
+    println!("Day 8");
+    day8();
+    println!("Day 9");
+    day9();
+    println!("Day 10");
+    day10();
+    println!("Day 11");
+    day11();
+    println!("Day 12");
     day12();
 }
