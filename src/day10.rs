@@ -304,12 +304,6 @@ pub fn part2(input: &Input) -> i64 {
     num_presses.iter().sum()
 }
 
-// Unlikely:
-// 19159
-
-// Attempted
-// 19292 - too low
-
 pub fn day10() {
     let input = fs::read_to_string("inputs/day10.txt").expect("Could not read input");
 
@@ -367,6 +361,3 @@ mod tests {
         assert_eq!(part2(&input), 48);
     }
 }
-
-// Weird:
-// [[1.0, 1.0, 1.0, 0.0, 220.0], [0.0, 1.0, 1.0, 0.0, 207.0], [1.0, 0.0, 0.0, 0.0, 13.0], [1.0, 0.0, 1.0, 1.0, 225.0], [0.0, 1.0, 1.0, 0.0, 207.0], [1.0, 1.0, 0.0, 1.0, 48.0]]
