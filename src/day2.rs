@@ -1,5 +1,5 @@
-use std::fs;
 use crate::timed::timed;
+use std::fs;
 
 type Range = (i64, i64);
 fn parse_input(input: &str) -> Vec<Range> {
@@ -16,26 +16,45 @@ fn parse_input(input: &str) -> Vec<Range> {
         .collect()
 }
 
+fn split_number(num: i64) -> (i64, i64) {
+    // +2 because we want to split so that uneven length
+    // numbers have a longer right part.
+    // E.g. 12345 -> (12, 345)
+    let len = num.ilog10() + 2;
+
+    let midpoint = len / 2;
+
+    let midpoint_exp = 10i64.pow(midpoint);
+    let left = num / midpoint_exp;
+    let right = num - left * midpoint_exp;
+
+    (left, right)
+}
+
+fn combine_numbers(left: i64, right: i64) -> i64 {
+    let right_len = right.ilog10() + 1;
+    left * 10i64.pow(right_len) + right
+}
+
 pub fn part1(ranges: &Vec<Range>) -> i64 {
     let mut sum = 0i64;
 
-    for (min, max) in ranges {
-        let mut current = (*min).max(11);
-        while current <= *max {
-            let current_str = current.to_string();
-            let half_point = current_str.len() / 2;
-            let next = if current_str[..half_point] == current_str[half_point..] {
-                if current >= *min {
-                    assert!(current >= *min);
-                    assert!(current <= *max);
+    for &(min, max) in ranges {
+        let mut current = min.max(11);
+        while current <= max {
+            let (left, right) = split_number(current);
+            let next = if left == right {
+                if current >= min {
+                    assert!(current >= min);
+                    assert!(current <= max);
 
                     sum += current;
                 }
-                (current_str[..half_point].parse::<i64>().unwrap()) + 1
+                left + 1
             } else {
-                current_str[..half_point].parse::<i64>().unwrap()
+                left
             };
-            current = format!("{next}{next}").parse().unwrap();
+            current = combine_numbers(next, next);
         }
     }
 
@@ -46,7 +65,7 @@ pub fn part1(ranges: &Vec<Range>) -> i64 {
 fn is_repeated_str(current: i64) -> bool {
     let current_str = current.to_string();
 
-    for num_splits in 2..current_str.len()+1 {
+    for num_splits in 2..current_str.len() + 1 {
         if current_str.len() % num_splits != 0 {
             continue;
         }
@@ -63,19 +82,19 @@ fn is_repeated_str(current: i64) -> bool {
 // Execution took 202ms
 fn is_repeated(current: i64) -> bool {
     let current_len = current.ilog10() + 1;
-    for test_len in 0..current_len{
+    for test_len in 0..current_len {
         let test = current % 10i64.pow(test_len);
         if test == 0 || current % test != 0 {
-            continue
+            continue;
         }
         let divisor = current / test;
         let mut expected = 0;
-        for j in 0..current_len/test_len {
+        for j in 0..current_len / test_len {
             expected += 10i64.pow(test_len * j);
         }
 
         if divisor == expected {
-            return true
+            return true;
         }
     }
 
@@ -110,8 +129,30 @@ pub fn day2() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     const TEST_INPUT: &str = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124";
+
+    #[test]
+    fn test_split() {
+        assert_eq!(split_number(123456), (123, 456));
+        assert_eq!(split_number(1234567), (123, 4567));
+    }
+
+    #[test]
+    fn test_combine() {
+        assert_eq!(combine_numbers(123, 456), (123456));
+        assert_eq!(combine_numbers(1234, 567), (1234567));
+    }
+
+    #[bench]
+    fn bench_p1(b: &mut Bencher) {
+        let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
+
+        let inputs = parse_input(&input);
+
+        b.iter(|| part1(&inputs));
+    }
 
     #[test]
     fn test_p1() {
@@ -153,5 +194,15 @@ mod tests {
     fn test_p2_small_range() {
         let ranges = parse_input(&"11-22,95-115");
         assert_eq!(243, part2(&ranges));
+    }
+
+    #[test]
+    fn test_real() {
+        let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
+
+        let inputs = parse_input(&input);
+
+        assert_eq!(part1(&inputs), 32976912643);
+        assert_eq!(part2(&inputs), 54446379122);
     }
 }

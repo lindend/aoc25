@@ -1,5 +1,10 @@
 #![allow(warnings)]
 #![feature(portable_simd)]
+#![feature(test)]
+
+extern crate test;
+
+use std::time::Instant;
 
 use crate::day1::day1;
 use crate::day2::day2;
@@ -13,6 +18,7 @@ use crate::day9::day9;
 use crate::day10::day10;
 use crate::day11::day11;
 use crate::day12::day12;
+use crate::timed::print_timespan;
 
 mod day1;
 mod day10;
@@ -37,6 +43,7 @@ mod util;
 // 9 p2
 // 10 p1 & p2
 fn main() {
+    let start = Instant::now();
     println!("Day 1");
     day1();
     println!("Day 2");
@@ -61,4 +68,5 @@ fn main() {
     day11();
     println!("Day 12");
     day12();
+    print_timespan("Total", Instant::now() - start);
 }
