@@ -1,5 +1,14 @@
 use crate::timed::timed;
-use std::fs;
+use std::{
+    fs,
+    ops::BitAnd,
+    simd::{
+        Simd, StdFloat,
+        cmp::SimdPartialOrd,
+        f64x8, i64x8,
+        num::{SimdFloat, SimdInt},
+    },
+};
 
 type Range = (i64, i64);
 fn parse_input(input: &str) -> Vec<Range> {
@@ -45,8 +54,8 @@ pub fn part1(ranges: &Vec<Range>) -> i64 {
             let (left, right) = split_number(current);
             let next = if left == right {
                 if current >= min {
-                    assert!(current >= min);
-                    assert!(current <= max);
+                    debug_assert!(current >= min);
+                    debug_assert!(current <= max);
 
                     sum += current;
                 }
@@ -80,6 +89,7 @@ fn is_repeated_str(current: i64) -> bool {
 }
 
 // Execution took 202ms
+// test day2::tests::bench_p2 ... bench: 210,053,762.60 ns/iter (+/- 4,452,027.77)
 fn is_repeated(current: i64) -> bool {
     let current_len = current.ilog10() + 1;
     for test_len in 0..current_len {
@@ -101,16 +111,120 @@ fn is_repeated(current: i64) -> bool {
     false
 }
 
-pub fn part2(ranges: &Vec<Range>) -> i64 {
+// test day2::tests::bench_p2 ... bench: 145,399,576.70 ns/iter (+/- 3,543,887.52)
+fn is_repeated_2(current: i64) -> bool {
+    let current_len = current.ilog10() + 1;
+    for test_len in 1..current_len {
+        if current_len % test_len != 0 {
+            continue;
+        }
+
+        let test = current % 10i64.pow(test_len);
+        if test == 0 || current % test != 0 {
+            continue;
+        }
+        let divisor = current / test;
+        let mut expected = 0;
+        for j in 0..current_len / test_len {
+            expected += 10i64.pow(test_len * j);
+        }
+
+        if divisor == expected {
+            return true;
+        }
+    }
+
+    false
+}
+
+// test day2::tests::bench_p2 ... bench: 145,399,576.70 ns/iter (+/- 3,543,887.52)
+pub fn part2_old(ranges: &Vec<Range>) -> i64 {
     let mut sum = 0i64;
 
     for (min, max) in ranges {
         let mut current = (*min).max(11);
         while current <= *max {
-            if is_repeated(current) {
+            if is_repeated_2(current) {
                 sum += current;
             }
             current += 1;
+        }
+    }
+
+    sum
+}
+
+fn split_number_n(num: i64, n: usize, target: &mut [i64]) -> bool {
+    let len = (num.ilog10() + 1) as usize;
+    if len % n != 0 {
+        return false;
+    }
+
+    let mut num = num;
+
+    let mut num_exp = 10i64.pow(((len * n - 1) / n) as u32);
+    for i in 0..n {
+        target[i] = num / num_exp;
+        num = num - target[i] * num_exp;
+    }
+
+    true
+}
+
+static ten_exp: [i64; 9] = [
+    10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+];
+
+#[inline]
+fn combine_number(num: i64x8, n: usize) -> i64x8 {
+    let mut res = Simd::splat(0);
+    let mut exp = Simd::splat(1);
+    for i in (0..n).rev() {
+        res += num * exp;
+        let logs = num.cast::<f64>().log10();
+        let ten_idx = logs.cast::<usize>();
+        exp *= Simd::gather_or(&ten_exp, ten_idx, Simd::splat(0));
+    }
+    res
+}
+
+// test day2::tests::bench_p2_2 ... bench:   6,847,824.40 ns/iter (+/- 219,436.95)
+// test day2::tests::bench_p2_2 ... bench:   4,972,764.45 ns/iter (+/- 185,672.51)
+pub fn part2(ranges: &Vec<Range>) -> i64 {
+    let mut sum = 0i64;
+
+    let mut repeat_buffer = vec![0i64; 100];
+    let simd_offsets = Simd::from_array([0, 1, 2, 3, 4, 5, 6, 7]);
+
+    for &(min, max) in ranges {
+        let max_num_repeats = (max.ilog10() + 1) as usize;
+        let simd_max = Simd::splat(max);
+        let simd_min = Simd::splat(min);
+
+        for num_repeats in 2..=max_num_repeats {
+            let min_len = (min.ilog10() + 1) as usize;
+            let begin_split: i64 = if min_len % num_repeats == 0 {
+                split_number_n(min, num_repeats, &mut repeat_buffer);
+                *repeat_buffer[0..num_repeats].iter().min().unwrap()
+            } else {
+                10i64.pow((min_len.div_ceil(num_repeats) - 1) as u32)
+            };
+
+            let mut current = Simd::splat(begin_split) + simd_offsets;
+            loop {
+                let combined = combine_number(current, num_repeats);
+                let max_mask = combined.simd_le(simd_max);
+                let min_mask = combined.simd_ge(simd_min);
+
+                let masked = max_mask.bitand(min_mask).select(combined, Simd::splat(0));
+                sum += masked.reduce_sum();
+
+                if !max_mask.all() {
+                    break;
+                }
+
+                current += Simd::splat(8);
+            }
         }
     }
 
@@ -128,6 +242,10 @@ pub fn day2() {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
+    use crate::timed::print_timespan;
+
     use super::*;
     use test::Bencher;
 
@@ -152,6 +270,17 @@ mod tests {
         let inputs = parse_input(&input);
 
         b.iter(|| part1(&inputs));
+    }
+
+    #[bench]
+    fn bench_p2(b: &mut Bencher) {
+        let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
+
+        let inputs = parse_input(&input);
+
+        assert_eq!(part2(&inputs), 54446379122);
+
+        b.iter(|| part2(&inputs));
     }
 
     #[test]
@@ -182,6 +311,20 @@ mod tests {
     fn test_p1_no_ranges() {
         let ranges = parse_input(&"2121212118-2121212124");
         assert_eq!(0, part1(&ranges));
+    }
+
+    #[test]
+    fn split_n() {
+        let mut buffer = vec![0i64; 10];
+        let ranges = parse_input(&TEST_INPUT);
+        assert!(split_number_n(123456, 3, &mut buffer));
+        assert_eq!(buffer, [12, 34, 56]);
+    }
+
+    #[test]
+    fn combine_n() {
+        let ranges = parse_input(&TEST_INPUT);
+        assert_eq!(combine_number(Simd::splat(12), 3), Simd::splat(121212));
     }
 
     #[test]

@@ -248,7 +248,7 @@ fn part2_line(buttons: &Buttons, joltages: &Joltages) -> i64 {
     if res.len() == 1 {
         let num_presses = res[0].iter().map(|v| v.round()).sum::<f64>().round() as i64;
         assert_ne!(num_presses, 0);
-        assert!(is_p2_solution(buttons, joltages, &res[0]));
+        debug_assert!(is_p2_solution(buttons, joltages, &res[0]));
         return num_presses;
     }
 
@@ -279,9 +279,9 @@ fn part2_line(buttons: &Buttons, joltages: &Joltages) -> i64 {
             param_values[i] += 1;
             if param_values[i] > param_max[i] {
                 if i == param_values.len() - 1 {
-                    assert!(is_p2_solution(buttons, joltages, &min_v));
-                    assert!(min_num_presses > 0);
-                    assert!(min_num_presses < 1000000);
+                    debug_assert!(is_p2_solution(buttons, joltages, &min_v));
+                    debug_assert!(min_num_presses > 0);
+                    debug_assert!(min_num_presses < 1000000);
                     return min_num_presses;
                 }
 
