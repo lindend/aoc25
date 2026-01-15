@@ -1,15 +1,15 @@
 /// Find the index of the first element in a sorted list that is larger than or
-/// equal to the find argument 
-/// 
-/// # Arguments 
-/// 
+/// equal to the find argument
+///
+/// # Arguments
+///
 /// * `list`: A sorted list
 /// * `find`: The element to find
-/// 
-/// returns: usize 
-/// 
-/// # Examples 
-/// 
+///
+/// returns: usize
+///
+/// # Examples
+///
 /// ```
 /// assert_eq!(binary_search_leftmost([1, 2, 3, 4], 2), 1);
 /// ```
@@ -34,7 +34,7 @@ pub fn binary_search_leftmost<T: PartialOrd>(list: &[T], find: T) -> usize {
     }
 }
 
-/// The same as leftmost, but will find the first element smaller than or equal to find
+/// The same as leftmost, but will find the last element smaller than or equal to find
 pub fn binary_search_rightmost<T: PartialOrd>(list: &[T], find: T) -> usize {
     let mut min = 0;
     let mut max = list.len();
@@ -120,3 +120,4 @@ mod tests {
         assert_eq!(binary_search_rightmost(&l, 13), 5);
     }
 }
+

@@ -7,7 +7,7 @@ extern crate test;
 use std::time::Instant;
 
 use crate::day1::day1;
-use crate::day2::day2;
+use crate::day2::{day2, day2_p2_bench};
 use crate::day3::day3;
 use crate::day4::day4;
 use crate::day5::day5;
