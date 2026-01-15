@@ -37,7 +37,6 @@ mod timed;
 mod util;
 
 // TODO: Slow days
-// 4 p2
 // 8 p1 & p2
 // 9 p2
 // 10 p1 & p2
