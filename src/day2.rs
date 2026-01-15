@@ -76,111 +76,6 @@ pub fn part1(ranges: &Vec<Range>) -> i64 {
     sum
 }
 
-// Execution took 231ms
-fn is_repeated_str(current: i64) -> bool {
-    let current_str = current.to_string();
-
-    for num_splits in 2..current_str.len() + 1 {
-        if current_str.len() % num_splits != 0 {
-            continue;
-        }
-
-        let repeater = &current_str[..current_str.len() / num_splits];
-        if current_str == repeater.repeat(num_splits) {
-            return true;
-        }
-    }
-
-    false
-}
-
-// Execution took 202ms
-// test day2::tests::bench_p2 ... bench: 210,053,762.60 ns/iter (+/- 4,452,027.77)
-fn is_repeated(current: i64) -> bool {
-    let current_len = current.ilog10() + 1;
-    for test_len in 0..current_len {
-        let test = current % 10i64.pow(test_len);
-        if test == 0 || current % test != 0 {
-            continue;
-        }
-        let divisor = current / test;
-        let mut expected = 0;
-        for j in 0..current_len / test_len {
-            expected += 10i64.pow(test_len * j);
-        }
-
-        if divisor == expected {
-            return true;
-        }
-    }
-
-    false
-}
-
-// test day2::tests::bench_p2 ... bench: 145,399,576.70 ns/iter (+/- 3,543,887.52)
-fn is_repeated_2(current: i64) -> bool {
-    let current_len = current.ilog10() + 1;
-    for test_len in 1..current_len {
-        if current_len % test_len != 0 {
-            continue;
-        }
-
-        let test = current % 10i64.pow(test_len);
-        if test == 0 || current % test != 0 {
-            continue;
-        }
-        let divisor = current / test;
-        let mut expected = 0;
-        for j in 0..current_len / test_len {
-            expected += 10i64.pow(test_len * j);
-        }
-
-        if divisor == expected {
-            return true;
-        }
-    }
-
-    false
-}
-
-// test day2::tests::bench_p2 ... bench: 145,399,576.70 ns/iter (+/- 3,543,887.52)
-pub fn part2_old(ranges: &Vec<Range>) -> i64 {
-    let mut sum = 0i64;
-
-    for (min, max) in ranges {
-        let mut current = (*min).max(11);
-        while current <= *max {
-            if is_repeated_2(current) {
-                sum += current;
-            }
-            current += 1;
-        }
-    }
-
-    sum
-}
-
-fn split_number_n(num: i64, n: usize, target: &mut [i64]) -> bool {
-    let len = (num.ilog10() + 1) as usize;
-    if len % n != 0 {
-        return false;
-    }
-
-    let mut num = num;
-
-    let mut num_exp = 10i64.pow(((len * n - 1) / n) as u32);
-    for i in 0..n {
-        target[i] = num / num_exp;
-        num = num - target[i] * num_exp;
-    }
-
-    true
-}
-
-static ten_exp: [i64; 9] = [
-    10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
-];
-
 static ten_exp_2: [i64; 10] = [
     1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
 ];
@@ -191,64 +86,13 @@ fn combine_number(num: i64x8, n: usize) -> i64x8 {
     let mut exp = Simd::splat(1);
     for i in (0..n).rev() {
         res += num * exp;
-        // let logs = num.cast::<f64>().log10();
-        // let ten_idx = logs.cast::<usize>();
-        // exp *= Simd::gather_or(&ten_exp, ten_idx, Simd::splat(0));
-        // let log2 = Simd::splat(64) - num.leading_zeros();
-        // let log10 = (Simd::splat(9) * log2).shr(Simd::splat(5)).cast::<usize>();
-        // exp *= Simd::gather_or(&ten_exp, log10, Simd::splat(0));
         let num_digits = simd_num_digits(num);
         exp *= Simd::gather_or(&ten_exp_2, num_digits.cast::<usize>(), Simd::splat(0));
     }
     res
 }
 
-// test day2::tests::bench_p2_2 ... bench:   6,847,824.40 ns/iter (+/- 219,436.95)
-// test day2::tests::bench_p2_2 ... bench:   4,972,764.45 ns/iter (+/- 185,672.51)
 pub fn part2(ranges: &Vec<Range>) -> i64 {
-    let mut sum = 0i64;
-
-    let mut repeat_buffer = vec![0i64; 100];
-    let simd_offsets = Simd::from_array([0, 1, 2, 3, 4, 5, 6, 7]);
-
-    for &(min, max) in ranges {
-        let max_num_repeats = (max.ilog10() + 1) as usize;
-        let simd_max = Simd::splat(max);
-        let simd_min = Simd::splat(min);
-
-        for num_repeats in 2..=max_num_repeats {
-            let min_len = (min.ilog10() + 1) as usize;
-            let begin_split: i64 = if min_len % num_repeats == 0 {
-                split_number_n(min, num_repeats, &mut repeat_buffer);
-                *repeat_buffer[0..num_repeats].iter().min().unwrap()
-            } else {
-                10i64.pow((min_len.div_ceil(num_repeats) - 1) as u32)
-            };
-
-            let mut current = Simd::splat(begin_split) + simd_offsets;
-            loop {
-                let combined = combine_number(current, num_repeats);
-                let max_mask = combined.simd_le(simd_max);
-                let min_mask = combined.simd_ge(simd_min);
-
-                let masked = max_mask.bitand(min_mask).select(combined, Simd::splat(0));
-                sum += masked.reduce_sum();
-
-                if !max_mask.all() {
-                    break;
-                }
-
-                current += Simd::splat(8);
-            }
-        }
-    }
-
-    sum
-}
-
-// test day2::tests::bench_p2_3 ... bench:   1,931,685.50 ns/iter (+/- 7,585.68)
-// test day2::tests::bench_p2_3 ... bench:   1,729,865.25 ns/iter (+/- 11,050.66)
-pub fn part2_3(ranges: &Vec<Range>) -> i64 {
     let mut min_min = *ranges.iter().map(|(min, _)| min).min().unwrap();
     let mut max_max = *ranges.iter().map(|(_, max)| max).max().unwrap();
     let mut max_num_repeats = max_max.ilog10() + 1;
@@ -291,16 +135,9 @@ pub fn day2() {
     let inputs = timed(|| parse_input(&input));
 
     println!("Part 1: {}", timed(|| part1(&inputs)));
-    println!("Part 2: {}", timed(|| part2_3(&inputs)));
+    println!("Part 2: {}", timed(|| part2(&inputs)));
 }
 
-pub fn day2_p2_bench() {
-    let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
-    let inputs = timed(|| parse_input(&input));
-    loop {
-        part2_3(&inputs);
-    }
-}
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
@@ -343,14 +180,7 @@ mod tests {
 
         b.iter(|| part2(&inputs));
     }
-    #[bench]
-    fn bench_p2_3(b: &mut Bencher) {
-        let input = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
 
-        let inputs = parse_input(&input);
-        println!("HEJ");
-        b.iter(|| part2_3(&inputs));
-    }
     #[test]
     fn test_p1() {
         let ranges = parse_input(&TEST_INPUT);
@@ -382,14 +212,6 @@ mod tests {
     }
 
     #[test]
-    fn split_n() {
-        let mut buffer = vec![0i64; 10];
-        let ranges = parse_input(&TEST_INPUT);
-        assert!(split_number_n(123456, 3, &mut buffer));
-        assert_eq!(buffer, [12, 34, 56]);
-    }
-
-    #[test]
     fn combine_n() {
         let ranges = parse_input(&TEST_INPUT);
         assert_eq!(combine_number(Simd::splat(12), 3), Simd::splat(121212));
@@ -410,14 +232,14 @@ mod tests {
 
     #[test]
     fn test_p2_large_range() {
-        assert_eq!(2121212121, part2_3(&parse_input(&"2121212118-2121212124")));
-        assert_eq!(824824824, part2_3(&parse_input(&"824824821-824824827")));
-        assert_eq!(38593859, part2_3(&parse_input(&"38593856-38593862")));
-        assert_eq!(446446, part2_3(&parse_input(&"446443-446449")));
-        assert_eq!(0, part2_3(&parse_input(&"1698522-1698528")));
-        assert_eq!(222222, part2_3(&parse_input(&"222220-222224")));
-        assert_eq!(1188511885, part2_3(&parse_input(&"1188511880-1188511890")));
-        assert_eq!(999 + 1010, part2_3(&parse_input(&"998-1012")));
+        assert_eq!(2121212121, part2(&parse_input(&"2121212118-2121212124")));
+        assert_eq!(824824824, part2(&parse_input(&"824824821-824824827")));
+        assert_eq!(38593859, part2(&parse_input(&"38593856-38593862")));
+        assert_eq!(446446, part2(&parse_input(&"446443-446449")));
+        assert_eq!(0, part2(&parse_input(&"1698522-1698528")));
+        assert_eq!(222222, part2(&parse_input(&"222220-222224")));
+        assert_eq!(1188511885, part2(&parse_input(&"1188511880-1188511890")));
+        assert_eq!(999 + 1010, part2(&parse_input(&"998-1012")));
     }
 
     #[test]
@@ -427,18 +249,6 @@ mod tests {
         let inputs = parse_input(&input);
 
         assert_eq!(part1(&inputs), 32976912643);
-        assert_eq!(part2_3(&inputs), 54446379122);
-    }
-
-    #[test]
-    fn test_real_p3_line_by_line() {
-        let inputs = fs::read_to_string("inputs/day2.txt").expect("Could not read input");
-
-        let inputs = inputs.split(",");
-        let input_lines = inputs.map(|i| parse_input(i));
-
-        for l in input_lines {
-            assert_eq!(part2_old(&l), part2_3(&l));
-        }
+        assert_eq!(part2(&inputs), 54446379122);
     }
 }

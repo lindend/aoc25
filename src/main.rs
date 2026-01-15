@@ -7,7 +7,7 @@ extern crate test;
 use std::time::Instant;
 
 use crate::day1::day1;
-use crate::day2::{day2, day2_p2_bench};
+use crate::day2::day2;
 use crate::day3::day3;
 use crate::day4::day4;
 use crate::day5::day5;
@@ -37,7 +37,6 @@ mod timed;
 mod util;
 
 // TODO: Slow days
-// 2 p2
 // 4 p2
 // 8 p1 & p2
 // 9 p2
